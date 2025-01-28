@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-disk="/dev/sdX" # Remplacez /dev/sdX par votre disque réel
+disk="/dev/sda" # Spécifiez le disque principal
 hostname="client_${USER}"
 username_turban="turban"
 username_dumbledore="dumbledore"
@@ -74,6 +74,13 @@ fi
 # Création du chargeur par défaut pour UEFI
 mkdir -p /boot/efi/EFI/Boot
 cp /boot/efi/EFI/GRUB/grubx64.efi /boot/efi/EFI/Boot/bootx64.efi
+
+# Diagnostic UEFI
+echo "Diagnostic des entrées UEFI :"
+efibootmgr
+
+echo "Contenu de la partition EFI :"
+ls -R /boot/efi
 
 # Activer les services
 systemctl enable NetworkManager
