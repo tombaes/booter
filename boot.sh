@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-disk="/dev/sda" # Remplacez /dev/sdX par votre disque réel
+disk="/dev/sdX" # Remplacez /dev/sdX par votre disque réel
 hostname="client_${USER}"
 username_turban="turban"
 username_dumbledore="dumbledore"
@@ -65,6 +65,12 @@ mkdir -p /boot/efi
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
 
+# Vérification et ajout avec efibootmgr
+if ! efibootmgr | grep -q "GRUB"; then
+    echo "Ajout de GRUB à la liste de démarrage UEFI..."
+    efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader \EFI\GRUB\grubx64.efi
+fi
+
 # Activer les services
 systemctl enable NetworkManager
 systemctl enable sshd
@@ -82,4 +88,3 @@ EOF
 # Fin
 umount -R /mnt
 echo "Installation terminée. Vous pouvez redémarrer."
-reboot
