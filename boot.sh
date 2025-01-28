@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-disk="/dev/sdX" # Remplacez /dev/sdX par votre disque réel
+disk="/dev/sda" # Remplacez /dev/sdX par votre disque réel
 hostname="client_${USER}"
 username_turban="turban"
 username_dumbledore="dumbledore"
