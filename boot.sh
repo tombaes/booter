@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-disk="/dev/sda" # Remplacez /dev/sdX par votre disque réel
+disk="/dev/sdX" # Remplacez /dev/sdX par votre disque réel
 hostname="client_${USER}"
 username_turban="turban"
 username_dumbledore="dumbledore"
@@ -62,7 +62,7 @@ pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_suppl
 
 # GRUB
 mkdir -p /boot/efi
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Vérification et ajout avec efibootmgr
@@ -70,6 +70,10 @@ if ! efibootmgr | grep -q "GRUB"; then
     echo "Ajout de GRUB à la liste de démarrage UEFI..."
     efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader \EFI\GRUB\grubx64.efi
 fi
+
+# Création du chargeur par défaut pour UEFI
+mkdir -p /boot/efi/EFI/Boot
+cp /boot/efi/EFI/GRUB/grubx64.efi /boot/efi/EFI/Boot/bootx64.efi
 
 # Activer les services
 systemctl enable NetworkManager
@@ -87,4 +91,6 @@ EOF
 
 # Fin
 umount -R /mnt
-echo "Installation terminée. Vous pouvez redémarrer."
+echo "Installation terminée. Redémarrage dans 5 secondes..."
+sleep 5
+reboot
