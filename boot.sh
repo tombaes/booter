@@ -17,7 +17,7 @@ hwclock --systohc
 echo "Partitionnement du disque..."
 parted $disk -- mklabel gpt
 parted $disk -- mkpart ESP fat32 1MiB 401MiB
-parted $disk -- set 1 boot on
+parted $disk -- set 1 esp on
 parted $disk -- mkpart primary ext4 401MiB 35.401GiB
 parted $disk -- mkpart primary linux-swap 35.401GiB 35.901GiB
 mkfs.fat -F32 ${disk}1
@@ -28,8 +28,8 @@ swapon ${disk}3
 # Montage
 echo "Montage des partitions..."
 mount ${disk}2 /mnt
-mkdir /mnt/boot
-mount ${disk}1 /mnt/boot
+mkdir -p /mnt/boot/efi
+mount ${disk}1 /mnt/boot/efi
 
 # Installation de base
 echo "Installation de base..."
@@ -61,8 +61,8 @@ EOT
 pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_supplicant mtools dosfstools base-devel linux-headers avahi xdg-user-dirs xdg-utils gvfs gvfs-smb nfs-utils inetutils dnsutils bash-completion openssh rsync reflector
 
 # GRUB
-mkdir /boot/EFI
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+mkdir -p /boot/efi
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Activer les services
@@ -82,3 +82,4 @@ EOF
 # Fin
 umount -R /mnt
 echo "Installation terminée. Vous pouvez redémarrer."
+reboot
