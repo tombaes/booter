@@ -15,25 +15,15 @@ hwclock --systohc
 
 # Partitionnement
 echo "Partitionnement du disque..."
-parted $disk -- mklabel gpt
-parted $disk -- mkpart ESP fat32 1MiB 401MiB
-parted $disk -- set 1 esp on
-parted $disk -- mkpart primary ext4 401MiB 15.401GiB
-parted $disk -- mkpart primary ext4 15.401GiB 20.401GiB
-parted $disk -- mkpart primary linux-swap 20.401GiB 20.901GiB
-mkfs.fat -F32 ${disk}1
-mkfs.ext4 ${disk}2
-mkfs.ext4 ${disk}3
-mkswap ${disk}4
-swapon ${disk}4
+parted $disk -- mkpart primary ext4 1MiB 35GiB
+mkfs.ext4 ${disk}1
 
 # Montage
-echo "Montage des partitions..."
-mount ${disk}2 /mnt
+echo "Montage de la partition..."
+mount ${disk}1 /mnt
 mkdir -p /mnt/boot/efi
-mount ${disk}1 /mnt/boot/efi
 mkdir -p /mnt/home
-mount ${disk}3 /mnt/home
+swapon ${disk}1
 
 # Installation de base
 echo "Installation de base..."
