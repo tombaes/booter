@@ -15,9 +15,9 @@ hwclock --systohc
 
 # Partitionnement en mode UEFI
 echo "Partitionnement du disque..."
-parted $disk -- mkpart ESP fat32 1MiB 512MiB
+parted $disk -- mkpart primary fat32 1MiB 512MiB
 parted $disk -- set 1 esp on
-parted $disk -- mkpart primary 512MiB 21GiB
+parted $disk -- mkpart primary 512MiB 100%
 pvcreate ${disk}2
 vgcreate vg_arch ${disk}2
 lvcreate -L 15G -n lv_root vg_arch
@@ -75,8 +75,6 @@ sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block lvm2 filesystems k
 mkinitcpio -P
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
-
-efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader /EFI/GRUB/grubx64.efi
 
 # SSH configuration (Port 42, Key-based only)
 sed -i 's/#Port 22/Port 42/' /etc/ssh/sshd_config
