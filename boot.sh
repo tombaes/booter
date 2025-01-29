@@ -15,9 +15,8 @@ hwclock --systohc
 
 # Partitionnement en mode UEFI
 echo "Partitionnement du disque..."
-parted $disk -- mklabel gpt
 parted $disk -- mkpart ESP fat32 1MiB 512MiB
-parted $disk -- set 1 boot on
+parted $disk -- set 1 esp on
 parted $disk -- mkpart primary 512MiB 21GiB
 pvcreate ${disk}2
 vgcreate vg_arch ${disk}2
