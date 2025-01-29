@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-disk="/dev/sda" # Spécifiez le disque principal
+disk="/dev/sda" # Disque principal
 hostname="client_${USER}"
 username_turban="turban"
 username_dumbledore="dumbledore"
@@ -18,18 +18,22 @@ echo "Partitionnement du disque..."
 parted $disk -- mklabel gpt
 parted $disk -- mkpart ESP fat32 1MiB 401MiB
 parted $disk -- set 1 esp on
-parted $disk -- mkpart primary ext4 401MiB 35.401GiB
-parted $disk -- mkpart primary linux-swap 35.401GiB 35.901GiB
+parted $disk -- mkpart primary ext4 401MiB 15.401GiB
+parted $disk -- mkpart primary ext4 15.401GiB 20.401GiB
+parted $disk -- mkpart primary linux-swap 20.401GiB 20.901GiB
 mkfs.fat -F32 ${disk}1
 mkfs.ext4 ${disk}2
-mkswap ${disk}3
-swapon ${disk}3
+mkfs.ext4 ${disk}3
+mkswap ${disk}4
+swapon ${disk}4
 
 # Montage
 echo "Montage des partitions..."
 mount ${disk}2 /mnt
 mkdir -p /mnt/boot/efi
 mount ${disk}1 /mnt/boot/efi
+mkdir -p /mnt/home
+mount ${disk}3 /mnt/home
 
 # Installation de base
 echo "Installation de base..."
@@ -58,7 +62,7 @@ cat <<EOT >> /etc/hosts
 EOT
 
 # Installation de base supplémentaire
-pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_supplicant mtools dosfstools base-devel linux-headers avahi xdg-user-dirs xdg-utils gvfs gvfs-smb nfs-utils inetutils dnsutils bash-completion openssh rsync reflector
+pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_supplicant mtools dosfstools base-devel linux-headers avahi xdg-user-dirs xdg-utils gvfs gvfs-smb nfs-utils inetutils dnsutils bash-completion openssh rsync reflector plasma-meta sddm
 
 # GRUB
 mkdir -p /boot/efi
@@ -84,7 +88,7 @@ ls -R /boot/efi
 
 # Activer les services
 systemctl enable NetworkManager
-systemctl enable sshd
+systemctl enable sddm
 
 # Créer les utilisateurs et groupes
 useradd -m -G asso,Hogwarts -s /bin/bash $username_turban
@@ -99,5 +103,4 @@ EOF
 # Fin
 umount -R /mnt
 echo "Installation terminée. Redémarrage dans 5 secondes..."
-sleep 5
 reboot
