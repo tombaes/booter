@@ -15,11 +15,10 @@ hwclock --systohc
 
 # Partitionnement avec LVM
 echo "Partitionnement du disque..."
-parted $disk -- mklabel msdos
-parted $disk -- mkpart primary ext4 1MiB 35GiB
+parted $disk -- mkpart primary 1MiB 35GiB
 pvcreate ${disk}1
 vgcreate vg_arch ${disk}1
-lvcreate -L 500M -n lv_boot vg_arch
+lvcreate -L 1G -n lv_boot vg_arch
 lvcreate -L 30G -n lv_root vg_arch
 lvcreate -L 4G -n lv_swap vg_arch
 lvcreate -l 100%FREE -n lv_home vg_arch
@@ -72,7 +71,7 @@ pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_suppl
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block lvm2 filesystems keyboard fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
 mkdir -p /boot/efi
-grub-install --target=i386-pc --recheck $disk
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Vérification et ajout avec efibootmgr
@@ -97,3 +96,4 @@ EOF
 
 # Fin
 umount -R /mnt
+echo "Installation terminée. Redémarrage dans 5 secondes..."
