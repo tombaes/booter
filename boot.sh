@@ -13,6 +13,13 @@ timezone="Europe/Paris"
 ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 hwclock --systohc
 
+# Vérification du disque
+echo "🔍 Vérification du disque..."
+if ! lsblk | grep -q "$disk"; then
+    echo "❌ Erreur: Le disque $disk n'existe pas."
+    exit 1
+fi
+
 # Partitionnement avec LVM
 echo "Partitionnement du disque..."
 parted $disk -- mkpart primary 1MiB 35GiB
@@ -24,11 +31,16 @@ lvcreate -L 4G -n lv_swap vg_arch
 lvcreate -l 100%FREE -n lv_home vg_arch
 
 # Formatage des partitions
+echo "🔍 Vérification et formatage des partitions..."
 mkfs.ext4 /dev/vg_arch/lv_root
 mkfs.ext4 /dev/vg_arch/lv_home
 mkfs.ext4 /dev/vg_arch/lv_boot
 mkswap /dev/vg_arch/lv_swap
 swapon /dev/vg_arch/lv_swap
+
+# Vérification du formatage
+echo "🔍 Vérification des systèmes de fichiers..."
+lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT $disk
 
 # Montage des partitions
 echo "Montage des partitions..."
@@ -80,6 +92,10 @@ if ! efibootmgr | grep -q "GRUB"; then
     efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader \EFI\GRUB\grubx64.efi
 fi
 
+# Vérification des entrées UEFI
+echo "🔍 Vérification des entrées UEFI..."
+efibootmgr
+
 # Activer les services
 systemctl enable NetworkManager
 systemctl enable sddm
@@ -96,4 +112,6 @@ EOF
 
 # Fin
 umount -R /mnt
-echo "Installation terminée. Redémarrage dans 5 secondes..."
+echo "🔍 Vérification finale des partitions montées..."
+lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT $disk
+echo "Installation terminée."
