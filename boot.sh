@@ -13,29 +13,38 @@ timezone="Europe/Paris"
 ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 hwclock --systohc
 
-# Partitionnement avec LVM
+# Vérification du disque
+echo "🔍 Vérification du disque..."
+if ! lsblk | grep -q "$disk"; then
+    echo "❌ Erreur: Le disque $disk n'existe pas."
+    exit 1
+fi
+
+# Partitionnement avec LVM et EFI
 echo "Partitionnement du disque..."
-parted $disk -- mkpart primary 1MiB 21GiB
-pvcreate ${disk}1
-vgcreate vg_arch ${disk}1
-lvcreate -L 400M -n lv_boot vg_arch
+parted $disk -- mklabel gpt
+parted $disk -- mkpart ESP fat32 1MiB 512MiB
+parted $disk -- set 1 boot on
+parted $disk -- mkpart primary 512MiB 21GiB
+pvcreate ${disk}2
+vgcreate vg_arch ${disk}2
 lvcreate -L 15G -n lv_root vg_arch
 lvcreate -L 500M -n lv_swap vg_arch
 lvcreate -l 100%FREE -n lv_home vg_arch
 
 # Formatage des partitions
 echo "🔍 Vérification et formatage des partitions..."
+mkfs.fat -F32 ${disk}1
 mkfs.ext4 /dev/vg_arch/lv_root
 mkfs.ext4 /dev/vg_arch/lv_home
-mkfs.vfat -F32 /dev/vg_arch/lv_boot
 mkswap /dev/vg_arch/lv_swap
 swapon /dev/vg_arch/lv_swap
 
 # Montage des partitions
 echo "Montage des partitions..."
 mount /dev/vg_arch/lv_root /mnt
-mkdir -p /mnt/boot
-mount /dev/vg_arch/lv_boot /mnt/boot
+mkdir -p /mnt/boot/efi
+mount ${disk}1 /mnt/boot/efi
 mkdir -p /mnt/home
 mount /dev/vg_arch/lv_home /mnt/home
 
@@ -68,10 +77,9 @@ EOT
 # Installation de base supplémentaire
 pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_supplicant mtools dosfstools base-devel linux-headers avahi xdg-user-dirs xdg-utils gvfs gvfs-smb nfs-utils inetutils dnsutils bash-completion openssh rsync reflector plasma-meta sddm lvm2
 
-# GRUB avec LVM
+# GRUB avec EFI
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block lvm2 filesystems keyboard fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
-mkdir -p /boot/efi
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
