@@ -22,25 +22,21 @@ fi
 
 # Partitionnement avec LVM
 echo "Partitionnement du disque..."
-parted $disk -- mkpart primary 1MiB 35GiB
+parted $disk -- mkpart primary 1MiB 21GiB
 pvcreate ${disk}1
 vgcreate vg_arch ${disk}1
-lvcreate -L 1G -n lv_boot vg_arch
-lvcreate -L 30G -n lv_root vg_arch
-lvcreate -L 4G -n lv_swap vg_arch
+lvcreate -L 400M -n lv_boot vg_arch
+lvcreate -L 15G -n lv_root vg_arch
+lvcreate -L 500M -n lv_swap vg_arch
 lvcreate -l 100%FREE -n lv_home vg_arch
 
 # Formatage des partitions
 echo "🔍 Vérification et formatage des partitions..."
 mkfs.ext4 /dev/vg_arch/lv_root
 mkfs.ext4 /dev/vg_arch/lv_home
-mkfs.ext4 /dev/vg_arch/lv_boot
+mkfs.vfat -F32 /dev/vg_arch/lv_boot
 mkswap /dev/vg_arch/lv_swap
 swapon /dev/vg_arch/lv_swap
-
-# Vérification du formatage
-echo "🔍 Vérification des systèmes de fichiers..."
-lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT $disk
 
 # Montage des partitions
 echo "Montage des partitions..."
@@ -86,15 +82,10 @@ mkdir -p /boot/efi
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
-# Vérification et ajout avec efibootmgr
-if ! efibootmgr | grep -q "GRUB"; then
-    echo "Ajout de GRUB à la liste de démarrage UEFI..."
-    efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader \EFI\GRUB\grubx64.efi
-fi
-
-# Vérification des entrées UEFI
-echo "🔍 Vérification des entrées UEFI..."
-efibootmgr
+# SSH configuration (Port 42, Key-based only)
+sed -i 's/#Port 22/Port 42/' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+systemctl restart sshd
 
 # Activer les services
 systemctl enable NetworkManager
@@ -103,10 +94,10 @@ systemctl enable sddm
 # Créer les utilisateurs et groupes
 useradd -m -G asso,Hogwarts -s /bin/bash $username_turban
 useradd -m -G managers,Hogwarts -s /bin/bash $username_dumbledore
-echo "Mot de passe pour $username_turban :"
-passwd $username_turban
-echo "Mot de passe pour $username_dumbledore :"
-passwd $username_dumbledore
+
+# Parrot OS /home auto-mount
+mkdir -p /mnt/parrot_home
+echo "/dev/sdb2 /home ext4 defaults 0 2" >> /etc/fstab
 
 EOF
 
@@ -114,4 +105,4 @@ EOF
 umount -R /mnt
 echo "🔍 Vérification finale des partitions montées..."
 lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT $disk
-echo "Installation terminée."
+echo "Installation terminée. Redémarrage dans 5 secondes..."
