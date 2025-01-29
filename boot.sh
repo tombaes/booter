@@ -47,6 +47,7 @@ pacstrap /mnt base linux linux-firmware lvm2
 
 echo "Génération du fichier fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
+echo "${disk}1 /boot/efi vfat defaults 0 1" >> /mnt/etc/fstab
 
 # Configuration du système
 arch-chroot /mnt /bin/bash <<EOF
@@ -73,8 +74,10 @@ pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_suppl
 # GRUB avec EFI
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block lvm2 filesystems keyboard fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
+
+efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader /EFI/GRUB/grubx64.efi
 
 # SSH configuration (Port 42, Key-based only)
 sed -i 's/#Port 22/Port 42/' /etc/ssh/sshd_config
