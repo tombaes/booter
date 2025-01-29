@@ -13,21 +13,35 @@ timezone="Europe/Paris"
 ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 hwclock --systohc
 
-# Partitionnement
+# Partitionnement avec LVM
 echo "Partitionnement du disque..."
+parted $disk -- mklabel msdos
 parted $disk -- mkpart primary ext4 1MiB 35GiB
-mkfs.ext4 ${disk}1
+pvcreate ${disk}1
+vgcreate vg_arch ${disk}1
+lvcreate -L 500M -n lv_boot vg_arch
+lvcreate -L 30G -n lv_root vg_arch
+lvcreate -L 4G -n lv_swap vg_arch
+lvcreate -l 100%FREE -n lv_home vg_arch
 
-# Montage
-echo "Montage de la partition..."
-mount ${disk}1 /mnt
-mkdir -p /mnt/boot/efi
+# Formatage des partitions
+mkfs.ext4 /dev/vg_arch/lv_root
+mkfs.ext4 /dev/vg_arch/lv_home
+mkfs.ext4 /dev/vg_arch/lv_boot
+mkswap /dev/vg_arch/lv_swap
+swapon /dev/vg_arch/lv_swap
+
+# Montage des partitions
+echo "Montage des partitions..."
+mount /dev/vg_arch/lv_root /mnt
+mkdir -p /mnt/boot
+mount /dev/vg_arch/lv_boot /mnt/boot
 mkdir -p /mnt/home
-swapon ${disk}1
+mount /dev/vg_arch/lv_home /mnt/home
 
 # Installation de base
 echo "Installation de base..."
-pacstrap /mnt base linux linux-firmware
+pacstrap /mnt base linux linux-firmware lvm2
 
 echo "Génération du fichier fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -52,11 +66,13 @@ cat <<EOT >> /etc/hosts
 EOT
 
 # Installation de base supplémentaire
-pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_supplicant mtools dosfstools base-devel linux-headers avahi xdg-user-dirs xdg-utils gvfs gvfs-smb nfs-utils inetutils dnsutils bash-completion openssh rsync reflector plasma-meta sddm
+pacman -S grub efibootmgr networkmanager network-manager-applet dialog wpa_supplicant mtools dosfstools base-devel linux-headers avahi xdg-user-dirs xdg-utils gvfs gvfs-smb nfs-utils inetutils dnsutils bash-completion openssh rsync reflector plasma-meta sddm lvm2
 
-# GRUB
+# GRUB avec LVM
+sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block lvm2 filesystems keyboard fsck)/' /etc/mkinitcpio.conf
+mkinitcpio -P
 mkdir -p /boot/efi
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
+grub-install --target=i386-pc --recheck $disk
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Vérification et ajout avec efibootmgr
@@ -64,17 +80,6 @@ if ! efibootmgr | grep -q "GRUB"; then
     echo "Ajout de GRUB à la liste de démarrage UEFI..."
     efibootmgr --create --disk $disk --part 1 --label "Arch Linux" --loader \EFI\GRUB\grubx64.efi
 fi
-
-# Création du chargeur par défaut pour UEFI
-mkdir -p /boot/efi/EFI/Boot
-cp /boot/efi/EFI/GRUB/grubx64.efi /boot/efi/EFI/Boot/bootx64.efi
-
-# Diagnostic UEFI
-echo "Diagnostic des entrées UEFI :"
-efibootmgr
-
-echo "Contenu de la partition EFI :"
-ls -R /boot/efi
 
 # Activer les services
 systemctl enable NetworkManager
@@ -92,4 +97,3 @@ EOF
 
 # Fin
 umount -R /mnt
-echo "Installation terminée. Redémarrage dans 5 secondes..."
