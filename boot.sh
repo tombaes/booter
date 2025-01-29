@@ -103,4 +103,3 @@ EOF
 # Fin
 umount -R /mnt
 echo "Installation terminée. Redémarrage dans 5 secondes..."
-reboot
