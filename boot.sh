@@ -13,7 +13,7 @@ timezone="Europe/Paris"
 ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 hwclock --systohc
 
-# Partitionnement avec LVM et EFI
+# Partitionnement en mode UEFI
 echo "Partitionnement du disque..."
 parted $disk -- mklabel gpt
 parted $disk -- mkpart ESP fat32 1MiB 512MiB
@@ -26,7 +26,7 @@ lvcreate -L 500M -n lv_swap vg_arch
 lvcreate -l 100%FREE -n lv_home vg_arch
 
 # Formatage des partitions
-echo "🔍 Vérification et formatage des partitions..."
+echo "🔍 Formatage des partitions..."
 mkfs.fat -F32 ${disk}1
 mkfs.ext4 /dev/vg_arch/lv_root
 mkfs.ext4 /dev/vg_arch/lv_home
@@ -100,3 +100,5 @@ umount -R /mnt
 echo "🔍 Vérification finale des partitions montées..."
 lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT $disk
 echo "Installation terminée. Redémarrage dans 5 secondes..."
+sleep 5
+reboot
