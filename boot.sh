@@ -13,13 +13,6 @@ timezone="Europe/Paris"
 ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 hwclock --systohc
 
-# Vérification du disque
-echo "🔍 Vérification du disque..."
-if ! lsblk | grep -q "$disk"; then
-    echo "❌ Erreur: Le disque $disk n'existe pas."
-    exit 1
-fi
-
 # Partitionnement avec LVM
 echo "Partitionnement du disque..."
 parted $disk -- mkpart primary 1MiB 21GiB
